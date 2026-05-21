@@ -1,4 +1,5 @@
 using intranet.Components;
+using Intranet.Services;
 
 namespace intranet
 {
@@ -9,6 +10,7 @@ namespace intranet
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
+            builder.Services.AddSingleton<IMenuService, MenuItemService>();
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
 
