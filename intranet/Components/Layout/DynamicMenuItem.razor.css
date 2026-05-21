@@ -1,0 +1,31 @@
+.nav-text {
+    flex: 1;
+}
+
+.expandable {
+    justify-content: space-between;
+}
+
+.submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    padding-left: 1rem;
+}
+
+.submenu.expanded {
+    max-height: 500vh;
+}
+
+.submenu ::deep .nav-item {
+    padding-bottom: 0.25rem;
+}
+
+.submenu ::deep .nav-item:last-of-type {
+    padding-top: 0.25rem;
+}
+
+.submenu ::deep .nav-link {
+    height: 2.5rem;
+    line-height: 2.5rem;
+}

@@ -1,0 +1,37 @@
+<div class="nav-item px-3 @(HasChildren ? "has-children" : "")">
+    @if (HasChildren)
+    {
+        <div class="nav-link expandable" @onclick="ToggleExpand" @onclick:stopPropagation="true">
+            <span class="bi @Item.Icon" aria-hidden="true"></span>
+            <span class="nav-text">@Item.Title</span>
+            <span class="bi bi-chevron-right-nav-menu chevron @(IsExpanded ? "rotated" : "")" aria-hidden="true"></span>
+        </div>
+        <div class="submenu @(IsExpanded ? "expanded" : "")">
+            @foreach (var child in (Item.Children ?? []).Where(c => c.IsActive).OrderBy(c => c.SortOrder))
+            {
+                <DynamicMenuItem Item="child" />
+            }
+        </div>
+    }
+    else
+    {
+        <NavLink class="nav-link" href="@Item.Url" Match="NavLinkMatch.All">
+            <span class="bi @Item.Icon" aria-hidden="true"></span>
+            <span class="nav-text">@Item.Title</span>
+        </NavLink>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public MenuItem Item { get; set; } = default!;
+
+    private bool IsExpanded { get; set; }
+
+    private bool HasChildren => Item.Children?.Any(c => c.IsActive) == true;
+
+    private void ToggleExpand()
+    {
+        IsExpanded = !IsExpanded;
+    }
+}

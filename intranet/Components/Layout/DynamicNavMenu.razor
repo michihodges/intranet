@@ -1,0 +1,46 @@
+@inject IMenuService MenuService
+@rendermode InteractiveServer
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">intranet</a>
+        <button type="button" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        @if (menuItems == null)
+        {
+            <div class="nav-item px-3">
+                <span class="nav-link">Loading...</span>
+            </div>
+        }
+        else
+        {
+            @foreach (var item in menuItems.Where(m => m.IsActive).OrderBy(m => m.SortOrder))
+            {
+                <DynamicMenuItem Item="item" />
+            }
+        }
+    </nav>
+</div>
+
+@code {
+    private List<MenuItem>? menuItems;
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        menuItems = await MenuService.GetMenuTreeAsync();
+    }
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}
