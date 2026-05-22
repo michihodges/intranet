@@ -1,55 +1,45 @@
+using Intranet.Data;
 using Intranet.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Intranet.Services;
 
-public class MenuItemService : IMenuService
+public class MenuItemService(AppDbContext db) : IMenuService
 {
-// load from database (return List<MenuItem>)
-// Create structured menu (return another List<MenuItem>)
-// Beide Methods aufrufen (verkettung)
-
-    public Task<List<MenuItem>> GetMenuTreeAsync()
+    public async Task<List<MenuItem>> GetMenuTreeAsync()
     {
-        var menuItems = new List<MenuItem>
-        {
-            new MenuItem
-            {
-                Id = 1,
-                Title = "Dashboard",
-                Url = "/",
-                Icon = "bi-house-door-nav-menu",
-                SortOrder = 1
-            },
-            new MenuItem
-            {
-                Id = 2,
-                Title = "Documents",
-                Icon = "bi-folder-nav-menu",
-                SortOrder = 2,
-                Children = new List<MenuItem>
-                {
-                    new MenuItem
-                    {
-                        Id = 3,
-                        Title = "Policies",
-                        Url = "/documents/policies",
-                        Icon = "bi-file-earmark-text-nav-menu",
-                        ParentId = 2,
-                        SortOrder = 1
-                    },
-                    new MenuItem
-                    {
-                        Id = 4,
-                        Title = "Templates",
-                        Url = "/documents/templates",
-                        Icon = "bi-file-earmark-nav-menu",
-                        ParentId = 2,
-                        SortOrder = 2
-                    }
-                }
-            }
-        };
+        var flatItems = await db.MenuItems
+            .AsNoTracking()
+            .Where(m => m.IsActive)
+            .OrderBy(m => m.SortOrder)
+            .ToListAsync();
 
-        return Task.FromResult(menuItems);
+        return BuildTree(flatItems);
+    }
+
+    private static List<MenuItem> BuildTree(List<MenuItem> flatItems)
+    {
+        var itemsById = flatItems.ToDictionary(m => m.Id);
+
+        foreach (var item in flatItems)
+        {
+            if (item.ParentId is null)
+                continue;
+
+            if (itemsById.TryGetValue(item.ParentId.Value, out var parent))
+            {
+                parent.Children.Add(item);
+            }
+        }
+
+        foreach (var item in flatItems)
+        {
+            item.Children = item.Children.OrderBy(c => c.SortOrder).ToList();
+        }
+
+        return flatItems
+            .Where(m => m.ParentId == null)
+            .OrderBy(m => m.SortOrder)
+            .ToList();
     }
 }
