@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace Intranet.Models;
 
 public class MenuItem
@@ -9,5 +11,7 @@ public class MenuItem
     public string? Icon { get; set; }
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
-    public List<MenuItem>? Children { get; set; } = new();
+
+    [NotMapped]
+    public List<MenuItem> Children { get; set; } = [];
 }
