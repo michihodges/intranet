@@ -1,5 +1,7 @@
 using intranet.Components;
+using Intranet.Data;
 using Intranet.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace intranet
 {
@@ -10,11 +12,19 @@ namespace intranet
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            builder.Services.AddSingleton<IMenuService, MenuItemService>();
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+            builder.Services.AddScoped<IMenuService, MenuItemService>();
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
 
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                db.Database.EnsureCreated();
+            }
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
