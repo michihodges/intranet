@@ -20,45 +20,5 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         menuItem.HasIndex(m => m.ParentId);
         menuItem.HasIndex(m => m.SortOrder);
-
-        menuItem.HasData(
-            new MenuItem
-            {
-                Id = 1,
-                Title = "Dashboard",
-                Url = "/",
-                Icon = "bi-house-door-nav-menu",
-                SortOrder = 1,
-                IsActive = true
-            },
-            new MenuItem
-            {
-                Id = 2,
-                Title = "Documents",
-                Url = null,
-                Icon = "bi-folder-nav-menu",
-                SortOrder = 2,
-                IsActive = true
-            },
-            new MenuItem
-            {
-                Id = 3,
-                ParentId = 2,
-                Title = "Policies",
-                Url = "/documents/policies",
-                Icon = "bi-file-earmark-text-nav-menu",
-                SortOrder = 1,
-                IsActive = true
-            },
-            new MenuItem
-            {
-                Id = 4,
-                ParentId = 2,
-                Title = "Templates",
-                Url = "/documents/templates",
-                Icon = "bi-file-earmark-nav-menu",
-                SortOrder = 2,
-                IsActive = true
-            });
     }
 }

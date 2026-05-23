@@ -1,9 +1,38 @@
 .nav-text {
     flex: 1;
+    min-width: 0;
 }
 
 .expandable {
-    justify-content: space-between;
+    position: relative;
+    padding-right: 2.25rem;
+    line-height: normal;
+}
+
+.chevron {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.875rem;
+    width: 1em;
+    height: 1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+}
+
+.chevron::before {
+    display: block;
+    line-height: 1;
+    vertical-align: 0;
+    transform-origin: center;
+    transition: transform 0.2s ease;
+}
+
+.chevron.rotated::before {
+    transform: rotate(90deg);
 }
 
 .submenu {
