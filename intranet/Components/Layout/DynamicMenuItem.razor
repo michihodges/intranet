@@ -4,7 +4,7 @@
         <div class="nav-link expandable" @onclick="ToggleExpand" @onclick:stopPropagation="true">
             <span class="bi @Item.Icon" aria-hidden="true"></span>
             <span class="nav-text">@Item.Title</span>
-            <span class="bi bi-chevron-right-nav-menu chevron @(IsExpanded ? "rotated" : "")" aria-hidden="true"></span>
+            <span class="bi bi-chevron-right chevron @(IsExpanded ? "rotated" : "")" aria-hidden="true"></span>
         </div>
         <div class="submenu @(IsExpanded ? "expanded" : "")">
             @foreach (var child in (Item.Children ?? []).Where(c => c.IsActive).OrderBy(c => c.SortOrder))

@@ -20,7 +20,7 @@
         }
         else
         {
-            @foreach (var item in menuItems.Where(m => m.IsActive).OrderBy(m => m.SortOrder))
+            @foreach (var item in menuItems)
             {
                 <DynamicMenuItem Item="item" />
             }
