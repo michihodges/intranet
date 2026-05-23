@@ -1,0 +1,12 @@
+.home-panels {
+    margin-top: 1.5rem;
+}
+
+.home-panel {
+    border: 1px dashed #c8c8c8;
+    background-color: #fafafa;
+}
+
+.home-panel .card-title {
+    color: #052767;
+}
