@@ -1,5 +1,7 @@
 @inject IMenuService MenuService
+@inject MenuChangeNotifier MenuChanges
 @rendermode InteractiveServer
+@implements IDisposable
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -36,11 +38,23 @@
 
     protected override async Task OnInitializedAsync()
     {
+        MenuChanges.MenuChanged += ReloadMenuAsync;
         menuItems = await MenuService.GetMenuTreeAsync();
+    }
+
+    private async Task ReloadMenuAsync()
+    {
+        menuItems = await MenuService.GetMenuTreeAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    public void Dispose()
+    {
+        MenuChanges.MenuChanged -= ReloadMenuAsync;
     }
 }
