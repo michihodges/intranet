@@ -13,9 +13,10 @@ namespace intranet
 
             // Add services to the container.
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-            builder.Services.AddDbContext<AppDbContext>(options =>
+            builder.Services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
             builder.Services.AddScoped<IMenuService, MenuItemService>();
+            builder.Services.AddScoped<MenuChangeNotifier>();
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
 
@@ -23,7 +24,7 @@ namespace intranet
 
             using (var scope = app.Services.CreateScope())
             {
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var db = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
                 db.Database.EnsureCreated();
 
                 foreach (var item in db.MenuItems.Where(m => m.Icon != null && m.Icon.EndsWith("-nav-menu")))
