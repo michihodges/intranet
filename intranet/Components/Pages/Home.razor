@@ -1,4 +1,7 @@
 ﻿@page "/"
+@rendermode InteractiveServer
+@inject IMenuService MenuService
+@inject MenuChangeNotifier MenuChanges
 
 <PageTitle>Home</PageTitle>
 
@@ -9,8 +12,63 @@
 <div class="home-panels d-flex flex-column gap-4">
     <div class="home-panel card">
         <div class="card-body">
-            <h2 class="card-title h5">Panel 1</h2>
-            <p class="card-text text-muted">Placeholder content — replace with your first widget or section.</p>
+            <h2 class="card-title h5">New menu item</h2>
+            <p class="card-text text-muted small">Add an entry to the sidebar navigation.</p>
+
+            @if (statusMessage is not null)
+            {
+                <div class="alert @(isError ? "alert-danger" : "alert-success") py-2" role="alert">
+                    @statusMessage
+                </div>
+            }
+
+            <EditForm Model="model" OnValidSubmit="HandleCreateAsync" class="menu-item-form">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label" for="menu-title">Title</label>
+                    <InputText id="menu-title" class="form-control" @bind-Value="model.Title" />
+                    <ValidationMessage For="@(() => model.Title)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="menu-url">URL</label>
+                    <InputText id="menu-url" class="form-control" @bind-Value="model.Url" placeholder="/path or leave empty for a group" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="menu-icon">Icon</label>
+                    <InputText id="menu-icon" class="form-control" @bind-Value="model.Icon" placeholder="bi-house-door" />
+                    <div class="form-text">Bootstrap Icons class name, without the <code>bi</code> prefix if you prefer — stored as entered.</div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label" for="menu-parent">Parent</label>
+                        <InputSelect id="menu-parent" class="form-select" @bind-Value="ParentIdValue">
+                            <option value="">Top level</option>
+                            @foreach (var item in parentOptions)
+                            {
+                                <option value="@item.Id">@item.Title</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label" for="menu-sort">Sort order</label>
+                        <InputNumber id="menu-sort" class="form-control" @bind-Value="model.SortOrder" />
+                    </div>
+                </div>
+
+                <div class="form-check mb-3">
+                    <InputCheckbox id="menu-active" class="form-check-input" @bind-Value="model.IsActive" />
+                    <label class="form-check-label" for="menu-active">Active</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                    @(isSaving ? "Saving…" : "Create menu item")
+                </button>
+            </EditForm>
         </div>
     </div>
     <div class="home-panel card">
@@ -26,3 +84,49 @@
         </div>
     </div>
 </div>
+
+@code {
+    private MenuItem model = new() { IsActive = true };
+    private List<MenuItem> parentOptions = [];
+    private string? statusMessage;
+    private bool isError;
+    private bool isSaving;
+
+    private string ParentIdValue
+    {
+        get => model.ParentId?.ToString() ?? "";
+        set => model.ParentId = string.IsNullOrEmpty(value) ? null : int.Parse(value);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        parentOptions = await MenuService.GetAllMenuItemsAsync();
+    }
+
+    private async Task HandleCreateAsync()
+    {
+        isSaving = true;
+        statusMessage = null;
+
+        try
+        {
+            var created = await MenuService.CreateMenuItemAsync(model);
+            await MenuChanges.NotifyAsync();
+
+            statusMessage = $"Created \"{created.Title}\".";
+            isError = false;
+            model = new MenuItem { IsActive = true };
+            parentOptions = await MenuService.GetAllMenuItemsAsync();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = ex.Message;
+            isError = true;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+}

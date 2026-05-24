@@ -10,3 +10,7 @@
 .home-panel .card-title {
     color: #052767;
 }
+
+.menu-item-form {
+    max-width: 32rem;
+}
