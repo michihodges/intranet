@@ -73,8 +73,76 @@
     </div>
     <div class="home-panel card">
         <div class="card-body">
-            <h2 class="card-title h5">Panel 2</h2>
-            <p class="card-text text-muted">Placeholder content — replace with your second widget or section.</p>
+            <h2 class="card-title h5">Update menu item</h2>
+            <p class="card-text text-muted small">Select an entry, edit its fields, and save.</p>
+
+            @if (editStatusMessage is not null)
+            {
+                <div class="alert @(editIsError ? "alert-danger" : "alert-success") py-2" role="alert">
+                    @editStatusMessage
+                </div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label" for="edit-menu-select">Menu item</label>
+                <InputSelect id="edit-menu-select" class="form-select" @bind-Value="SelectedEditId" @bind-Value:after="LoadEditModel">
+                    <option value="">Choose an item…</option>
+                    @foreach (var item in allMenuItems)
+                    {
+                        <option value="@item.Id">@FormatMenuItemLabel(item)</option>
+                    }
+                </InputSelect>
+            </div>
+
+            @if (editModel.Id > 0)
+            {
+                <EditForm Model="editModel" OnValidSubmit="HandleUpdateAsync" class="menu-item-form">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label class="form-label" for="edit-menu-title">Title</label>
+                        <InputText id="edit-menu-title" class="form-control" @bind-Value="editModel.Title" />
+                        <ValidationMessage For="@(() => editModel.Title)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="edit-menu-url">URL</label>
+                        <InputText id="edit-menu-url" class="form-control" @bind-Value="editModel.Url" placeholder="/path or leave empty for a group" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="edit-menu-icon">Icon</label>
+                        <InputText id="edit-menu-icon" class="form-control" @bind-Value="editModel.Icon" placeholder="bi-house-door" />
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <label class="form-label" for="edit-menu-parent">Parent</label>
+                            <InputSelect id="edit-menu-parent" class="form-select" @bind-Value="EditParentIdValue">
+                                <option value="">Top level</option>
+                                @foreach (var item in editParentOptions)
+                                {
+                                    <option value="@item.Id">@item.Title</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label" for="edit-menu-sort">Sort order</label>
+                            <InputNumber id="edit-menu-sort" class="form-control" @bind-Value="editModel.SortOrder" />
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <InputCheckbox id="edit-menu-active" class="form-check-input" @bind-Value="editModel.IsActive" />
+                        <label class="form-check-label" for="edit-menu-active">Active</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" disabled="@editIsSaving">
+                        @(editIsSaving ? "Saving…" : "Save changes")
+                    </button>
+                </EditForm>
+            }
         </div>
     </div>
     <div class="home-panel card">
@@ -87,10 +155,17 @@
 
 @code {
     private MenuItem model = new() { IsActive = true };
+    private MenuItem editModel = new() { IsActive = true };
+    private List<MenuItem> allMenuItems = [];
     private List<MenuItem> parentOptions = [];
+    private List<MenuItem> editParentOptions = [];
     private string? statusMessage;
+    private string? editStatusMessage;
     private bool isError;
+    private bool editIsError;
     private bool isSaving;
+    private bool editIsSaving;
+    private string selectedEditId = "";
 
     private string ParentIdValue
     {
@@ -98,9 +173,63 @@
         set => model.ParentId = string.IsNullOrEmpty(value) ? null : int.Parse(value);
     }
 
+    private string SelectedEditId
+    {
+        get => selectedEditId;
+        set => selectedEditId = value;
+    }
+
+    private string EditParentIdValue
+    {
+        get => editModel.ParentId?.ToString() ?? "";
+        set => editModel.ParentId = string.IsNullOrEmpty(value) ? null : int.Parse(value);
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        parentOptions = await MenuService.GetAllMenuItemsAsync();
+        await RefreshMenuListsAsync();
+    }
+
+    private async Task RefreshMenuListsAsync()
+    {
+        allMenuItems = await MenuService.GetAllMenuItemsAsync();
+        parentOptions = allMenuItems;
+        if (editModel.Id > 0)
+        {
+            editParentOptions = allMenuItems.Where(m => m.Id != editModel.Id).ToList();
+        }
+    }
+
+    private void LoadEditModel()
+    {
+        editStatusMessage = null;
+
+        if (string.IsNullOrEmpty(selectedEditId))
+        {
+            editModel = new MenuItem { IsActive = true };
+            editParentOptions = [];
+            return;
+        }
+
+        var id = int.Parse(selectedEditId);
+        var source = allMenuItems.First(m => m.Id == id);
+        editModel = new MenuItem
+        {
+            Id = source.Id,
+            ParentId = source.ParentId,
+            Title = source.Title,
+            Url = source.Url,
+            Icon = source.Icon,
+            SortOrder = source.SortOrder,
+            IsActive = source.IsActive
+        };
+        editParentOptions = allMenuItems.Where(m => m.Id != id).ToList();
+    }
+
+    private static string FormatMenuItemLabel(MenuItem item)
+    {
+        var indent = item.ParentId is null ? "" : "— ";
+        return $"{indent}{item.Title} (#{item.Id})";
     }
 
     private async Task HandleCreateAsync()
@@ -116,7 +245,8 @@
             statusMessage = $"Created \"{created.Title}\".";
             isError = false;
             model = new MenuItem { IsActive = true };
-            parentOptions = await MenuService.GetAllMenuItemsAsync();
+            await RefreshMenuListsAsync();
+            LoadEditModel();
         }
         catch (Exception ex)
         {
@@ -126,6 +256,33 @@
         finally
         {
             isSaving = false;
+        }
+    }
+
+    private async Task HandleUpdateAsync()
+    {
+        editIsSaving = true;
+        editStatusMessage = null;
+
+        try
+        {
+            var updated = await MenuService.UpdateMenuItemAsync(editModel);
+            await MenuChanges.NotifyAsync();
+
+            editStatusMessage = $"Updated \"{updated.Title}\".";
+            editIsError = false;
+            selectedEditId = updated.Id.ToString();
+            await RefreshMenuListsAsync();
+            LoadEditModel();
+        }
+        catch (Exception ex)
+        {
+            editStatusMessage = ex.Message;
+            editIsError = true;
+        }
+        finally
+        {
+            editIsSaving = false;
         }
     }
 
