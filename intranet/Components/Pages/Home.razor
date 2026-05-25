@@ -147,8 +147,43 @@
     </div>
     <div class="home-panel card">
         <div class="card-body">
-            <h2 class="card-title h5">Panel 3</h2>
-            <p class="card-text text-muted">Placeholder content — replace with your third widget or section.</p>
+            <h2 class="card-title h5">Delete menu item</h2>
+            <p class="card-text text-muted small">Select an entry and remove it permanently.</p>
+
+            @if (deleteStatusMessage is not null)
+            {
+                <div class="alert @(deleteIsError ? "alert-danger" : "alert-success") py-2" role="alert">
+                    @deleteStatusMessage
+                </div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label" for="delete-menu-select">Menu item</label>
+                <InputSelect id="delete-menu-select" class="form-select" @bind-Value="SelectedDeleteId" @bind-Value:after="OnDeleteSelectionChanged">
+                    <option value="">Choose an item…</option>
+                    @foreach (var item in allMenuItems)
+                    {
+                        <option value="@item.Id">@FormatMenuItemLabel(item)</option>
+                    }
+                </InputSelect>
+            </div>
+
+            @if (deleteTarget is not null)
+            {
+                @if (deleteChildCount > 0)
+                {
+                    <div class="alert alert-warning py-2 mb-0" role="alert">
+                        This item has @deleteChildCount child @(deleteChildCount == 1 ? "item" : "items"). Delete or reassign them before removing this entry.
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted small mb-3">Delete <strong>@deleteTarget.Title</strong>? This cannot be undone.</p>
+                    <button type="button" class="btn btn-danger" disabled="@deleteIsSaving" @onclick="HandleDeleteAsync">
+                        @(deleteIsSaving ? "Deleting…" : "Delete menu item")
+                    </button>
+                }
+            }
         </div>
     </div>
 </div>
@@ -165,7 +200,13 @@
     private bool editIsError;
     private bool isSaving;
     private bool editIsSaving;
+    private string? deleteStatusMessage;
+    private bool deleteIsError;
+    private bool deleteIsSaving;
     private string selectedEditId = "";
+    private string selectedDeleteId = "";
+    private MenuItem? deleteTarget;
+    private int deleteChildCount;
 
     private string ParentIdValue
     {
@@ -183,6 +224,12 @@
     {
         get => editModel.ParentId?.ToString() ?? "";
         set => editModel.ParentId = string.IsNullOrEmpty(value) ? null : int.Parse(value);
+    }
+
+    private string SelectedDeleteId
+    {
+        get => selectedDeleteId;
+        set => selectedDeleteId = value;
     }
 
     protected override async Task OnInitializedAsync()
@@ -224,6 +271,20 @@
             IsActive = source.IsActive
         };
         editParentOptions = allMenuItems.Where(m => m.Id != id).ToList();
+    }
+
+    private void OnDeleteSelectionChanged()
+    {
+        deleteStatusMessage = null;
+        deleteTarget = null;
+        deleteChildCount = 0;
+
+        if (string.IsNullOrEmpty(selectedDeleteId))
+            return;
+
+        var id = int.Parse(selectedDeleteId);
+        deleteTarget = allMenuItems.First(m => m.Id == id);
+        deleteChildCount = allMenuItems.Count(m => m.ParentId == id);
     }
 
     private static string FormatMenuItemLabel(MenuItem item)
@@ -283,6 +344,47 @@
         finally
         {
             editIsSaving = false;
+        }
+    }
+
+    private async Task HandleDeleteAsync()
+    {
+        if (deleteTarget is null)
+            return;
+
+        deleteIsSaving = true;
+        deleteStatusMessage = null;
+
+        try
+        {
+            var title = deleteTarget.Title;
+            var deletedId = deleteTarget.Id;
+            await MenuService.DeleteMenuItemAsync(deletedId);
+            await MenuChanges.NotifyAsync();
+
+            deleteStatusMessage = $"Deleted \"{title}\".";
+            deleteIsError = false;
+            selectedDeleteId = "";
+            deleteTarget = null;
+            deleteChildCount = 0;
+
+            if (selectedEditId == deletedId.ToString())
+            {
+                selectedEditId = "";
+                editModel = new MenuItem { IsActive = true };
+                editParentOptions = [];
+            }
+
+            await RefreshMenuListsAsync();
+        }
+        catch (Exception ex)
+        {
+            deleteStatusMessage = ex.Message;
+            deleteIsError = true;
+        }
+        finally
+        {
+            deleteIsSaving = false;
         }
     }
 

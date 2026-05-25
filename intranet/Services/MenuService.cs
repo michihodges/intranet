@@ -89,6 +89,23 @@ public class MenuItemService(IDbContextFactory<AppDbContext> dbFactory) : IMenuS
         return existing;
     }
 
+    public async Task DeleteMenuItemAsync(int id)
+    {
+        if (id <= 0)
+            throw new ArgumentException("A valid menu item must be selected.");
+
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var existing = await db.MenuItems.FindAsync(id)
+            ?? throw new InvalidOperationException("Menu item not found.");
+
+        var hasChildren = await db.MenuItems.AnyAsync(m => m.ParentId == id);
+        if (hasChildren)
+            throw new InvalidOperationException("Cannot delete a menu item that has child items. Delete or reassign the children first.");
+
+        db.MenuItems.Remove(existing);
+        await db.SaveChangesAsync();
+    }
+
     private static void NormalizeMenuItem(MenuItem item)
     {
         var title = item.Title?.Trim();
