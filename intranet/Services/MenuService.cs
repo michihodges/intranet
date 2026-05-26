@@ -59,6 +59,7 @@ public class MenuItemService(IDbContextFactory<AppDbContext> dbFactory) : IMenuS
         NormalizeMenuItem(item);
 
         await using var db = await dbFactory.CreateDbContextAsync();
+        await ValidateParentAsync(db, item.ParentId);
         db.MenuItems.Add(item);
         await db.SaveChangesAsync();
         return item;
@@ -77,6 +78,12 @@ public class MenuItemService(IDbContextFactory<AppDbContext> dbFactory) : IMenuS
         await using var db = await dbFactory.CreateDbContextAsync();
         var existing = await db.MenuItems.FindAsync(item.Id)
             ?? throw new InvalidOperationException("Menu item not found.");
+
+        await ValidateParentAsync(db, item.ParentId);
+
+        var hasChildren = await db.MenuItems.AnyAsync(m => m.ParentId == item.Id);
+        if (hasChildren && !string.IsNullOrWhiteSpace(item.Url))
+            throw new ArgumentException("A menu item with children cannot have a URL. Remove the URL or reassign the children first.");
 
         existing.Title = item.Title;
         existing.Url = item.Url;
@@ -115,5 +122,17 @@ public class MenuItemService(IDbContextFactory<AppDbContext> dbFactory) : IMenuS
         item.Title = title;
         item.Url = string.IsNullOrWhiteSpace(item.Url) ? null : item.Url.Trim();
         item.Icon = string.IsNullOrWhiteSpace(item.Icon) ? null : item.Icon.Trim();
+    }
+
+    private static async Task ValidateParentAsync(AppDbContext db, int? parentId)
+    {
+        if (parentId is null)
+            return;
+
+        var parent = await db.MenuItems.FindAsync(parentId.Value)
+            ?? throw new ArgumentException("The selected parent menu item was not found.");
+
+        if (!string.IsNullOrWhiteSpace(parent.Url))
+            throw new ArgumentException("Only group items (without a URL) can be parents.");
     }
 }

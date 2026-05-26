@@ -53,6 +53,7 @@
                                 <option value="@item.Id">@item.Title</option>
                             }
                         </InputSelect>
+                        <div class="form-text">Only group items (no URL) can have children.</div>
                     </div>
                     <div class="col-sm-6">
                         <label class="form-label" for="menu-sort">Sort order</label>
@@ -126,6 +127,7 @@
                                     <option value="@item.Id">@item.Title</option>
                                 }
                             </InputSelect>
+                            <div class="form-text">Only group items (no URL) can have children.</div>
                         </div>
                         <div class="col-sm-6">
                             <label class="form-label" for="edit-menu-sort">Sort order</label>
@@ -240,10 +242,10 @@
     private async Task RefreshMenuListsAsync()
     {
         allMenuItems = await MenuService.GetAllMenuItemsAsync();
-        parentOptions = allMenuItems;
+        parentOptions = GetParentOptions(allMenuItems);
         if (editModel.Id > 0)
         {
-            editParentOptions = allMenuItems.Where(m => m.Id != editModel.Id).ToList();
+            editParentOptions = GetParentOptions(allMenuItems, excludeId: editModel.Id, currentParentId: editModel.ParentId);
         }
     }
 
@@ -270,7 +272,17 @@
             SortOrder = source.SortOrder,
             IsActive = source.IsActive
         };
-        editParentOptions = allMenuItems.Where(m => m.Id != id).ToList();
+        editParentOptions = GetParentOptions(allMenuItems, excludeId: id, currentParentId: editModel.ParentId);
+    }
+
+    private static List<MenuItem> GetParentOptions(
+        IEnumerable<MenuItem> items,
+        int? excludeId = null,
+        int? currentParentId = null)
+    {
+        return items
+            .Where(m => (excludeId is null || m.Id != excludeId) && (m.IsGroup || m.Id == currentParentId))
+            .ToList();
     }
 
     private void OnDeleteSelectionChanged()

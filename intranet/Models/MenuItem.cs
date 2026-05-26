@@ -17,4 +17,7 @@ public class MenuItem
 
     [NotMapped]
     public List<MenuItem> Children { get; set; } = [];
+
+    [NotMapped]
+    public bool IsGroup => string.IsNullOrWhiteSpace(Url);
 }
